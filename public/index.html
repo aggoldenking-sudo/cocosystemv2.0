@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Cocosystem POS</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<title>Cocosystem POS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -29,23 +29,25 @@
     <button id="create-taq-btn">Crear Taquilla</button>
   </div>
   <div>
-    <h3>Agregar Lotería / Sorteo / Animal / Caballo</h3>
+    <h3>Agregar Lotería</h3>
     <input type="text" id="lottery-name" placeholder="Nombre Lotería">
     <button id="add-lottery-btn">Agregar Lotería</button>
   </div>
   <div>
+    <h3>Agregar Sorteo</h3>
     <input type="text" id="draw-hour" placeholder="Hora (8-19)">
-    <input type="text" id="draw-label" placeholder="Etiqueta">
+    <input type="text" id="draw-label" placeholder="Etiqueta Sorteo">
     <button id="add-draw-btn">Agregar Sorteo</button>
   </div>
   <div>
+    <h3>Agregar Animal</h3>
     <input type="text" id="animal-number" placeholder="Número Animal">
     <input type="text" id="animal-name" placeholder="Nombre Animal">
     <button id="add-animal-btn">Agregar Animal</button>
   </div>
 </div>
 
-<!-- Taquilla Panel / POS -->
+<!-- Taquilla Panel -->
 <div id="taquilla-panel" style="display:none;">
   <h2>Panel Taquilla</h2>
   <div>
@@ -57,16 +59,14 @@
     <button id="add-item-btn">Agregar</button>
   </div>
   <table id="sale-table">
-    <thead>
-      <tr><th>N°</th><th>Nombre</th><th>Monto</th></tr>
-    </thead>
+    <thead><tr><th>N°</th><th>Nombre</th><th>Monto</th></tr></thead>
     <tbody></tbody>
   </table>
   <button id="process-sale-btn">Procesar Venta</button>
 </div>
 
 <!-- Modal Ticket -->
-<div id="ticket-modal" class="modal">
+<div id="ticket-modal" class="modal" style="display:none;">
   <div class="modal-content">
     <h3>Ticket de Venta</h3>
     <div id="ticket-content">
@@ -77,9 +77,7 @@
       <p>Sorteo: <b id="ticket-draw"></b></p>
       <hr>
       <table>
-        <thead>
-          <tr><th>N°</th><th>Animal/Caballo</th><th>Monto</th></tr>
-        </thead>
+        <thead><tr><th>N°</th><th>Animal/Caballo</th><th>Monto</th></tr></thead>
         <tbody id="ticket-rows"></tbody>
       </table>
       <hr>
@@ -98,94 +96,96 @@ import { registerSale } from './js/taquilla.js';
 import { showTicket, copyTicket, printTicket, closeTicketModal } from './js/app.js';
 import { lotteries, draws } from './js/data.js';
 
-const loginBtn = document.getElementById('login-btn');
-const emailInput = document.getElementById('email');
-const passInput = document.getElementById('password');
+document.addEventListener("DOMContentLoaded", () => {
 
-const loginContainer = document.getElementById('login-container');
-const masterPanel = document.getElementById('master-panel');
-const taqPanel = document.getElementById('taquilla-panel');
+  const loginBtn = document.getElementById('login-btn');
+  const emailInput = document.getElementById('email');
+  const passInput = document.getElementById('password');
 
-const lotterySelect = document.getElementById('lottery-select');
-const drawSelect = document.getElementById('draw-select');
-const saleTableBody = document.querySelector('#sale-table tbody');
+  const loginContainer = document.getElementById('login-container');
+  const masterPanel = document.getElementById('master-panel');
+  const taqPanel = document.getElementById('taquilla-panel');
 
-let currentSale = [];
+  const lotterySelect = document.getElementById('lottery-select');
+  const drawSelect = document.getElementById('draw-select');
+  const saleTableBody = document.querySelector('#sale-table tbody');
 
-loginBtn.addEventListener('click', async ()=>{
-  const email = emailInput.value;
-  const pass = passInput.value;
-  const user = await login(email, pass);
-  if(!user) return;
+  let currentSale = [];
 
-  loginContainer.style.display='none';
-  if(user.role==='master'){
-    masterPanel.style.display='block';
-  }else{
-    taqPanel.style.display='block';
-    // Cargar loterías y sorteos
-    lotteries.forEach(l=>{ lotterySelect.innerHTML+=`<option value="${l.id}">${l.name}</option>` });
-    draws.forEach(d=>{ drawSelect.innerHTML+=`<option value="${d.hour}">${d.label}</option>` });
-  }
-});
+  // LOGIN
+  loginBtn.addEventListener('click', async () => {
+    const email = emailInput.value;
+    const pass = passInput.value;
+    const user = await login(email, pass);
+    if (!user) return;
 
-// Master acciones
-document.getElementById('create-taq-btn').addEventListener('click', async ()=>{
-  const email = document.getElementById('taq-email').value;
-  await master.createTaquilla(email,{});
-  alert('Taquilla creada');
-});
+    loginContainer.style.display = 'none';
 
-document.getElementById('add-lottery-btn').addEventListener('click', async ()=>{
-  const name = document.getElementById('lottery-name').value;
-  await master.addLottery(name);
-  alert('Lotería agregada');
-});
+    if (user.role === 'master') {
+      masterPanel.style.display = 'block';
+    } else {
+      taqPanel.style.display = 'block';
+      lotteries.forEach(l => lotterySelect.innerHTML += `<option value="${l.id}">${l.name}</option>`);
+      draws.forEach(d => drawSelect.innerHTML += `<option value="${d.hour}">${d.label}</option>`);
+    }
+  });
 
-document.getElementById('add-draw-btn').addEventListener('click', async ()=>{
-  const lotteryId = lotterySelect.value;
-  const hour = document.getElementById('draw-hour').value;
-  const label = document.getElementById('draw-label').value;
-  await master.addDraw(lotteryId,hour,label);
-  alert('Sorteo agregado');
-});
+  // MASTER BOTONES
+  document.getElementById('create-taq-btn').addEventListener('click', async () => {
+    const email = document.getElementById('taq-email').value;
+    await master.createTaquilla(email, {});
+    alert('Taquilla creada');
+  });
+  document.getElementById('add-lottery-btn').addEventListener('click', async () => {
+    const name = document.getElementById('lottery-name').value;
+    await master.addLottery(name);
+    alert('Lotería agregada');
+  });
+  document.getElementById('add-draw-btn').addEventListener('click', async () => {
+    const lotteryId = lotterySelect.value;
+    const hour = document.getElementById('draw-hour').value;
+    const label = document.getElementById('draw-label').value;
+    await master.addDraw(lotteryId, hour, label);
+    alert('Sorteo agregado');
+  });
+  document.getElementById('add-animal-btn').addEventListener('click', async () => {
+    const number = document.getElementById('animal-number').value;
+    const name = document.getElementById('animal-name').value;
+    await master.addAnimal(number, name);
+    alert('Animal agregado');
+  });
 
-document.getElementById('add-animal-btn').addEventListener('click', async ()=>{
-  const number = document.getElementById('animal-number').value;
-  const name = document.getElementById('animal-name').value;
-  await master.addAnimal(number,name);
-  alert('Animal agregado');
-});
+  // TAQUILLA BOTONES
+  document.getElementById('add-item-btn').addEventListener('click', () => {
+    const num = document.getElementById('item-number').value;
+    const name = document.getElementById('item-name').value;
+    const amt = parseFloat(document.getElementById('item-amount').value);
+    if (!num || !name || !amt) return alert('Completa todos los campos');
+    currentSale.push({ number: num, name: name, amount: amt });
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${num}</td><td>${name}</td><td>${amt}</td>`;
+    saleTableBody.appendChild(tr);
+    document.getElementById('item-number').value = '';
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-amount').value = '';
+  });
 
-// Taquilla acciones
-document.getElementById('add-item-btn').addEventListener('click', ()=>{
-  const num=document.getElementById('item-number').value;
-  const name=document.getElementById('item-name').value;
-  const amt=parseFloat(document.getElementById('item-amount').value);
-  if(!num || !name || !amt) return alert('Completa todos los campos');
-  currentSale.push({number:num,name:name,amount:amt});
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td>${num}</td><td>${name}</td><td>${amt}</td>`;
-  saleTableBody.appendChild(tr);
-  document.getElementById('item-number').value='';
-  document.getElementById('item-name').value='';
-  document.getElementById('item-amount').value='';
-});
+  document.getElementById('process-sale-btn').addEventListener('click', async () => {
+    if (currentSale.length === 0) return alert('Agrega items primero');
+    const ticket = {
+      ticketId: "T-" + Date.now(),
+      taquilla: emailInput.value,
+      date: new Date().toLocaleString(),
+      lottery: lotterySelect.options[lotterySelect.selectedIndex].text,
+      draw: drawSelect.value,
+      items: currentSale,
+      total: currentSale.reduce((a, b) => a + b.amount, 0)
+    };
+    await registerSale(ticket);
+    currentSale = [];
+    saleTableBody.innerHTML = '';
+  });
 
-document.getElementById('process-sale-btn').addEventListener('click', async ()=>{
-  if(currentSale.length===0) return alert('Agrega items primero');
-  const ticket = {
-    ticketId: "T-"+Date.now(),
-    taquilla: emailInput.value,
-    date: new Date().toLocaleString(),
-    lottery: lotterySelect.options[lotterySelect.selectedIndex].text,
-    draw: drawSelect.value,
-    items: currentSale,
-    total: currentSale.reduce((a,b)=>a+b.amount,0)
-  };
-  await registerSale(ticket);
-  currentSale=[];
-  saleTableBody.innerHTML='';
 });
 </script>
 
