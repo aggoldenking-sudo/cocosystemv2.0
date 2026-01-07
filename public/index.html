@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cocosystem POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Cocosystem POS</h1>
+</header>
+
+<!-- Login -->
+<div id="login-container">
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Correo">
+  <input type="password" id="password" placeholder="Contraseña">
+  <button id="login-btn">Ingresar</button>
+</div>
+
+<!-- Master Panel -->
+<div id="master-panel" style="display:none;">
+  <h2>Panel Master</h2>
+  <div>
+    <h3>Crear Taquilla</h3>
+    <input type="email" id="taq-email" placeholder="Email Taquilla">
+    <button id="create-taq-btn">Crear Taquilla</button>
+  </div>
+  <div>
+    <h3>Agregar Lotería / Sorteo / Animal / Caballo</h3>
+    <input type="text" id="lottery-name" placeholder="Nombre Lotería">
+    <button id="add-lottery-btn">Agregar Lotería</button>
+  </div>
+  <div>
+    <input type="text" id="draw-hour" placeholder="Hora (8-19)">
+    <input type="text" id="draw-label" placeholder="Etiqueta">
+    <button id="add-draw-btn">Agregar Sorteo</button>
+  </div>
+  <div>
+    <input type="text" id="animal-number" placeholder="Número Animal">
+    <input type="text" id="animal-name" placeholder="Nombre Animal">
+    <button id="add-animal-btn">Agregar Animal</button>
+  </div>
+</div>
+
+<!-- Taquilla Panel / POS -->
+<div id="taquilla-panel" style="display:none;">
+  <h2>Panel Taquilla</h2>
+  <div>
+    <select id="lottery-select"></select>
+    <select id="draw-select"></select>
+    <input type="text" id="item-number" placeholder="Número Animal/Caballo">
+    <input type="text" id="item-name" placeholder="Animal/Caballo">
+    <input type="number" id="item-amount" placeholder="Monto">
+    <button id="add-item-btn">Agregar</button>
+  </div>
+  <table id="sale-table">
+    <thead>
+      <tr><th>N°</th><th>Nombre</th><th>Monto</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button id="process-sale-btn">Procesar Venta</button>
+</div>
+
+<!-- Modal Ticket -->
+<div id="ticket-modal" class="modal">
+  <div class="modal-content">
+    <h3>Ticket de Venta</h3>
+    <div id="ticket-content">
+      <p>Taquilla: <b id="ticket-taq"></b></p>
+      <p>Ticket #: <b id="ticket-id"></b></p>
+      <p>Fecha: <b id="ticket-date"></b></p>
+      <p>Lotería: <b id="ticket-lottery"></b></p>
+      <p>Sorteo: <b id="ticket-draw"></b></p>
+      <hr>
+      <table>
+        <thead>
+          <tr><th>N°</th><th>Animal/Caballo</th><th>Monto</th></tr>
+        </thead>
+        <tbody id="ticket-rows"></tbody>
+      </table>
+      <hr>
+      <p>Total: <b id="ticket-total"></b></p>
+    </div>
+    <button onclick="copyTicket()">Copiar ticket</button>
+    <button onclick="printTicket()">Imprimir</button>
+    <button onclick="closeTicketModal()">Cerrar</button>
+  </div>
+</div>
+
+<script type="module">
+import { login } from './js/auth.js';
+import * as master from './js/master.js';
+import { registerSale } from './js/taquilla.js';
+import { showTicket, copyTicket, printTicket, closeTicketModal } from './js/app.js';
+import { lotteries, draws } from './js/data.js';
+
+const loginBtn = document.getElementById('login-btn');
+const emailInput = document.getElementById('email');
+const passInput = document.getElementById('password');
+
+const loginContainer = document.getElementById('login-container');
+const masterPanel = document.getElementById('master-panel');
+const taqPanel = document.getElementById('taquilla-panel');
+
+const lotterySelect = document.getElementById('lottery-select');
+const drawSelect = document.getElementById('draw-select');
+const saleTableBody = document.querySelector('#sale-table tbody');
+
+let currentSale = [];
+
+loginBtn.addEventListener('click', async ()=>{
+  const email = emailInput.value;
+  const pass = passInput.value;
+  const user = await login(email, pass);
+  if(!user) return;
+
+  loginContainer.style.display='none';
+  if(user.role==='master'){
+    masterPanel.style.display='block';
+  }else{
+    taqPanel.style.display='block';
+    // Cargar loterías y sorteos
+    lotteries.forEach(l=>{ lotterySelect.innerHTML+=`<option value="${l.id}">${l.name}</option>` });
+    draws.forEach(d=>{ drawSelect.innerHTML+=`<option value="${d.hour}">${d.label}</option>` });
+  }
+});
+
+// Master acciones
+document.getElementById('create-taq-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('taq-email').value;
+  await master.createTaquilla(email,{});
+  alert('Taquilla creada');
+});
+
+document.getElementById('add-lottery-btn').addEventListener('click', async ()=>{
+  const name = document.getElementById('lottery-name').value;
+  await master.addLottery(name);
+  alert('Lotería agregada');
+});
+
+document.getElementById('add-draw-btn').addEventListener('click', async ()=>{
+  const lotteryId = lotterySelect.value;
+  const hour = document.getElementById('draw-hour').value;
+  const label = document.getElementById('draw-label').value;
+  await master.addDraw(lotteryId,hour,label);
+  alert('Sorteo agregado');
+});
+
+document.getElementById('add-animal-btn').addEventListener('click', async ()=>{
+  const number = document.getElementById('animal-number').value;
+  const name = document.getElementById('animal-name').value;
+  await master.addAnimal(number,name);
+  alert('Animal agregado');
+});
+
+// Taquilla acciones
+document.getElementById('add-item-btn').addEventListener('click', ()=>{
+  const num=document.getElementById('item-number').value;
+  const name=document.getElementById('item-name').value;
+  const amt=parseFloat(document.getElementById('item-amount').value);
+  if(!num || !name || !amt) return alert('Completa todos los campos');
+  currentSale.push({number:num,name:name,amount:amt});
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${num}</td><td>${name}</td><td>${amt}</td>`;
+  saleTableBody.appendChild(tr);
+  document.getElementById('item-number').value='';
+  document.getElementById('item-name').value='';
+  document.getElementById('item-amount').value='';
+});
+
+document.getElementById('process-sale-btn').addEventListener('click', async ()=>{
+  if(currentSale.length===0) return alert('Agrega items primero');
+  const ticket = {
+    ticketId: "T-"+Date.now(),
+    taquilla: emailInput.value,
+    date: new Date().toLocaleString(),
+    lottery: lotterySelect.options[lotterySelect.selectedIndex].text,
+    draw: drawSelect.value,
+    items: currentSale,
+    total: currentSale.reduce((a,b)=>a+b.amount,0)
+  };
+  await registerSale(ticket);
+  currentSale=[];
+  saleTableBody.innerHTML='';
+});
+</script>
+
+</body>
+</html>
